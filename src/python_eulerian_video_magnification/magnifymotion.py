@@ -22,6 +22,16 @@ class MagnifyMotion(Magnify):
         for i in range(filter_tensor_list[0].shape[0]):
             up = filter_tensor_list[0][i]
             for n in range(self._levels - 1):
-                up = cv2.pyrUp(up) + filter_tensor_list[n + 1][i]
+                # Upsample 'up'
+                up = cv2.pyrUp(up)
+
+                # Resize the upsampled 'up' to match the shape of filter_tensor_list[n + 1][i]
+                target_shape = filter_tensor_list[n + 1][i].shape
+                up = cv2.resize(up, (target_shape[1], target_shape[0]))
+
+                # Add the resized upsampled image to the current level of the filter tensor
+                up = up + filter_tensor_list[n + 1][i]
+
+            # Assign the reconstructed frame to 'final'
             final[i] = up
         return final

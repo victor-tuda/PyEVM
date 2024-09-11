@@ -16,6 +16,10 @@ def build_laplacian_pyramid(src, levels=3):
     pyramid = []
     for i in range(levels, 0, -1):
         GE = cv2.pyrUp(gaussianPyramid[i])
+
+        # Ensure the size of GE matches the size of the previous Gaussian pyramid level
+        GE = cv2.resize(GE, (gaussianPyramid[i - 1].shape[1], gaussianPyramid[i - 1].shape[0]))
+
         L = cv2.subtract(gaussianPyramid[i - 1], GE)
         pyramid.append(L)
     return pyramid
@@ -43,3 +47,24 @@ def laplacian_video(video_tensor, levels=3):
         for n in range(levels):
             tensor_list[n][i] = pyr[n]
     return tensor_list
+
+
+def _reconstruct_from_tensor_list(filter_tensor_list):
+    levels = len(filter_tensor_list)
+    for i in range(filter_tensor_list[0].shape[0]):
+        up = filter_tensor_list[-1][i]
+        for n in range(levels - 2, -1, -1):
+            # Upsample 'up'
+            up = cv2.pyrUp(up)
+
+            # Ensure the dimensions of 'up' match those of the current filter tensor
+            filter_shape = filter_tensor_list[n][i].shape
+            up = cv2.resize(up, (filter_shape[1], filter_shape[0]))
+
+            # Resize the current filter tensor if needed to match the shape of 'up'
+            filter_resized = cv2.resize(filter_tensor_list[n + 1][i], (up.shape[1], up.shape[0]))
+
+            # Now add the upsampled 'up' to the resized filter tensor
+            up = up + filter_resized
+
+    return up
